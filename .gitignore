@@ -1,0 +1,22 @@
+# Virtual environment
+venv/
+env/
+ENV/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+
+# Secrets
+.env
+
+# Local SQLite database
+*.db
+*.sqlite3
+
+# Editor/OS noise
+.vscode/
+.idea/
+.DS_Store

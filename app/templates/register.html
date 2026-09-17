@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}Create your account — Cafe Rewards{% endblock %}
+{% block content %}
+<div class="space-y-6">
+    <div class="bg-white rounded-xl shadow p-6">
+        <h2 class="text-lg font-bold text-amber-900 mb-1">Join Cafe Rewards</h2>
+        <p class="text-sm text-stone-500 mb-4">Earn points every time you pay — no password to remember.</p>
+
+        <form id="register-form" hx-post="/auth/register" hx-ext="json-enc" hx-swap="none" class="space-y-3">
+            <div>
+                <label class="block text-sm font-medium">Full name</label>
+                <input type="text" name="full_name" required minlength="1"
+                       class="w-full border border-stone-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-600"
+                       placeholder="Your name">
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium">Phone number</label>
+                <input type="tel" name="phone_number" required minlength="10" maxlength="15"
+                       class="w-full border border-stone-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-600"
+                       placeholder="10-digit mobile number">
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium">Email</label>
+                <input type="email" name="email" required
+                       class="w-full border border-stone-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-amber-600"
+                       placeholder="you@example.com">
+                <p class="text-xs text-stone-400 mt-1">We'll email you when you earn points or unlock a free drink.</p>
+            </div>
+
+            <button type="submit" id="register-submit"
+                    class="w-full bg-amber-800 text-white rounded-lg py-2 font-medium hover:bg-amber-900 transition disabled:opacity-50">
+                Create account
+            </button>
+        </form>
+
+        <div id="register-result" class="mt-4 text-sm"></div>
+
+        <p class="text-xs text-stone-400 mt-4 text-center">
+            Already have an account? <a href="/login" class="text-amber-800 font-medium underline">Log in</a>
+        </p>
+    </div>
+</div>
+
+<script>
+    // hx-swap="none": /auth/register is a JSON API endpoint (shared with
+    // Swagger/non-browser clients), same reasoning as admin_dashboard.html —
+    // we read the response ourselves instead of letting htmx swap raw JSON in.
+    document.getElementById('register-form').addEventListener('htmx:afterRequest', async (evt) => {
+        const resultEl = document.getElementById('register-result');
+        const submitBtn = document.getElementById('register-submit');
+        let data;
+        try { data = JSON.parse(evt.detail.xhr.responseText); } catch { data = null; }
+
+        if (evt.detail.successful && data) {
+            resultEl.innerHTML = '<span class="text-green-700 font-semibold">Account created — sending your login code…</span>';
+            submitBtn.disabled = true;
+
+            // Kick off the first OTP immediately so the customer lands on
+            // /login with a code already waiting for them.
+            try {
+                await fetch('/auth/otp/request', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ phone_number: data.phone_number }),
+                });
+            } catch (err) {
+                // Non-fatal — they can still request an OTP from /login.
+            }
+
+            window.location.href = `/login?phone=${encodeURIComponent(data.phone_number)}&registered=1`;
+        } else {
+            const message = data && data.detail ? data.detail : 'Registration failed. Please check your details and try again.';
+            resultEl.innerHTML = `<span class="text-red-600 font-semibold">${message}</span>`;
+        }
+    });
+</script>
+{% endblock %}
